@@ -27,6 +27,12 @@ DB_NAME = os.getenv("DB_NAME")
 PG_VERSION = os.getenv("PG_VERSION")
 
 
+if not os.path.exists('./logs'):
+    os.makedirs('./logs')
+if not os.path.exists('./logs/logfile.txt'):
+    with open('./logs/logfile.txt', 'w') as f:
+        pass
+
 # Подключаем логирование
 logging.basicConfig(
     filename='./logs/logfile.txt', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO, encoding='utf-8'
