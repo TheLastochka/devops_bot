@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  bot:
+    container_name: bot
+    build: ./bot
+    environment:
+      SSH_HOST: ${RM_HOST}
+      SSH_PORT: ${RM_PORT}
+      SSH_USER: ${RM_USER}
+      SSH_PASSWORD: ${RM_PASSWORD}
+      BOT_TOKEN: ${TOKEN}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_DATABASE}
+      DB_REPL_HOST: ${DB_REPL_HOST}
+    env_file:
+      - .env
+    volumes:
+      - ./bot/logs:/bot/logs
+      - db_logs:/bot/db_logs:ro
+  
+  db:
+    container_name: db
+    build: 
+      context: ./db
+      args:
+        REPL_USER: ${DB_REPL_USER}
+        REPL_PASSWORD: ${DB_REPL_PASSWORD}
+        DB_NAME: ${DB_DATABASE}
+        DB_PORT: ${DB_PORT}
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGPORT: ${DB_PORT}
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256\nhost replication all 0.0.0.0/0 scram-sha-256"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    env_file:
+      - .env
+    volumes:
+      - db:/var/lib/postgresql/data
+      - db_logs:/db_logs
+
+  db_repl:
+    container_name: db_repl
+    build: 
+      context: ./db_repl
+      args:
+        PGUSER: ${DB_REPL_USER}
+        DB_PORT: ${DB_PORT}
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGUSER: ${DB_REPL_USER}
+      PGPASSWORD: ${DB_REPL_PASSWORD}
+    env_file:
+      - .env
+    depends_on:
+      - db
+  
+volumes:
+  db:
+  db_logs:
