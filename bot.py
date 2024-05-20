@@ -332,16 +332,19 @@ def other_commands(update: Update, context):
 
         if bot_command in map_repl:
             data = get_repl(bot_command)
+            logger.info(f"data: {data}")
             update.message.reply_text(data)
             return
 
         if bot_command in map_psql:
             data = get_psql(bot_command)
+            logger.info(f"data: {data}")
             update.message.reply_text(data)
             return
 
         if bot_command in map_unix:
             data = get_unix(bot_command)
+            logger.info(f"data: {data}")
             update.message.reply_text(data)
             return
         
