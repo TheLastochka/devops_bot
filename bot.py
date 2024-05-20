@@ -329,24 +329,24 @@ def other_commands(update: Update, context):
     logger.info(f"Пользователь {update.message.from_user.username}({update.message.from_user.id}) запросил команду {bot_command}")
 
     if bot_command.startswith('get_'):
-
+        execed = False
+        data = None
         if bot_command in map_repl:
             data = get_repl(bot_command)
-            logger.info(f"data: {data}")
-            update.message.reply_text(data)
-            return
-
-        if bot_command in map_psql:
+            execed = True
+        elif bot_command in map_psql:
             data = get_psql(bot_command)
-            logger.info(f"data: {data}")
-            update.message.reply_text(data)
-            return
-
-        if bot_command in map_unix:
+            execed = True
+        elif bot_command in map_unix:
             data = get_unix(bot_command)
+            execed = True
+
+        if data:
             logger.info(f"data: {data}")
             update.message.reply_text(data)
-            return
+        elif execed:
+            logger.info(f"Ничего не найдено")
+            update.message.reply_text('Ничего не найдено')
         
         update.message.reply_text('Unknown command')
     else:
