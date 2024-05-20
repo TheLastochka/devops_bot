@@ -1,0 +1,36 @@
+all:
+  vars:
+    PG_VERSION: 14
+    DB_REPL_USER: repl_user
+    DB_REPL_PASSWORD: Qq123456
+
+    DB_DATABASE: bot_db
+    DB_USER: postgres
+    DB_PASSWORD: Qq123456
+    DB_PORT: 5432
+  hosts:
+    host_db:
+      ansible_connection: ssh
+      ansible_host: 192.168.255.145
+      ansible_user: root
+      ansible_ssh_pass: 123
+
+      sql_init_template: init.sql # full path
+    host_db_repl:
+      ansible_connection: ssh
+      ansible_host: 192.168.255.144
+      ansible_user: root
+      ansible_ssh_pass: 123
+    host_bot:
+      ansible_connection: ssh
+      ansible_host: 192.168.255.145
+      ansible_user: root
+      ansible_ssh_pass: 123
+
+      bot_pwd: /root/bot
+      TOKEN: 
+      RM_HOST: 192.168.255.129
+      RM_PORT: 22
+      RM_USER: kali
+      RM_PASSWORD: kali
+    

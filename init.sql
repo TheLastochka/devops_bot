@@ -1,0 +1,32 @@
+SELECT 'CREATE DATABASE DB_DATABASE' 
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'DB_DATABASE')\gexec
+
+SELECT $$ CREATE USER DB_REPL_USER WITH REPLICATION ENCRYPTED PASSWORD 'DB_REPL_PASSWORD'$$
+WHERE NOT EXISTS (SELECT FROM pg_user WHERE usename = 'DB_REPL_USER')\gexec
+
+ALTER USER DB_USER WITH PASSWORD 'DB_PASSWORD';
+
+\c DB_DATABASE;
+CREATE TABLE IF NOT EXISTS emails (
+    id serial PRIMARY KEY,
+    email VARCHAR(50) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS phones (
+    id serial PRIMARY KEY,
+    phone VARCHAR(50) NOT NULL
+);
+
+INSERT INTO emails (email)
+    SELECT * FROM (
+        SELECT 'first@gmail.com' UNION 
+        SELECT 'second@gmail.com'
+    ) as emails_init
+    WHERE NOT EXISTS (SELECT * FROM emails);
+
+INSERT INTO phones (phone)
+    SELECT * FROM (
+        SELECT '89215551212' UNION 
+        SELECT '+79215551212'
+    ) as phones_init
+    WHERE NOT EXISTS (SELECT * FROM phones);
+    

@@ -1,0 +1,147 @@
+- name: install psql for all
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: install postgresql
+      package: 
+        name: postgresql
+        state: present
+    - name: install psycopg
+      package: 
+        name: postgresql-contrib
+        state: present
+    - name: install libpq-dev
+      package:
+        name: libpq-dev
+        state: present
+
+- name: master db init
+  hosts: host_db
+  gather_facts: false
+
+  tasks:
+    - name: copy template init.sql
+      copy:
+        src: "{{ sql_init_template }}"
+        dest: /tmp/init.sql
+        mode: '0644'
+    - name: chown postgres on init.sql
+      command: chown postgres:postgres /tmp/init.sql
+    - name: replace DB_DATABASE
+      replace:
+        path: /tmp/init.sql
+        regexp: "DB_DATABASE"
+        replace: "{{ DB_DATABASE }}"
+    - name: replace DB_REPL_PASSWORD
+      replace:
+        path: /tmp/init.sql
+        regexp: "DB_REPL_PASSWORD"
+        replace: "{{ DB_REPL_PASSWORD }}"
+    - name: replace REPL_USER
+      replace:
+        path: /tmp/init.sql
+        regexp: "DB_REPL_USER"
+        replace: "{{ DB_REPL_USER }}"
+    - name: replace DB_REPL_USER
+      replace:
+        path: /tmp/init.sql
+        regexp: "DB_USER"
+        replace: "{{ DB_USER }}"
+    - name: replace DB_PASSWORD
+      replace:
+        path: /tmp/init.sql
+        regexp: "DB_PASSWORD"
+        replace: "{{ DB_PASSWORD }}"
+    - name: restart postgresql
+      service:
+        name: postgresql
+        state: restarted
+    - name: run init.sql
+      command: psql -a -f /tmp/init.sql
+      become: true
+      become_user: postgres
+
+- name: master db replica init
+  hosts: host_db
+  gather_facts: false
+  tasks:
+    - name: write settings to conf file
+      blockinfile:
+        path: "/etc/postgresql/{{ PG_VERSION }}/main/postgresql.conf"
+        block: |
+          port = {{ DB_PORT }}
+          listen_addresses = '*'
+          wal_level=replica
+          hot_standby=on
+          max_wal_senders=10
+          max_replication_slots=10
+          hot_standby_feedback=on
+          log_replication_commands=on
+          logging_collector = on
+          log_statement = 'all'
+    - name: add replicant and host to pg_hba conf
+      blockinfile:
+        path: "/etc/postgresql/{{ PG_VERSION }}/main/pg_hba.conf"
+        block: | 
+          host replication {{ DB_REPL_USER }} {{ hostvars['host_db_repl']['ansible_host'] }}/24 scram-sha-256
+          host all all {{ hostvars['host_bot']['ansible_host'] }}/32 trust
+    - name: restart postgresql
+      service:
+        name: postgresql
+        state: restarted
+
+- name: slave db init
+  hosts: host_db_repl
+  gather_facts: false
+  tasks:
+    - name: stop postgres
+      command: systemctl stop postgresql
+    - name: rm
+      command: rm -rf /var/lib/postgresql/{{ PG_VERSION }}/
+    - name: pg_basebackup
+      command: pg_basebackup -R -h {{ hostvars['host_db']['ansible_host'] }} -D /var/lib/postgresql/{{ PG_VERSION }}/main/ -U {{ DB_REPL_USER }} -vP -w
+      environment: 
+        PGPASSWORD: "{{ DB_REPL_PASSWORD }}"
+      become: true
+      become_user: postgres 
+    - name: chown
+      command: chown -R postgres:postgres /var/lib/postgresql/
+    - name: restart postgresql
+      service:
+        name: postgresql
+        state: restarted
+
+- name: python bot init
+  hosts: host_bot
+  gather_facts: false
+  tasks:
+    - name: mkdir
+      command: mkdir -p "{{ bot_pwd }}/origin_bot"
+    - name: clear dir
+      command: rm -rf "{{ bot_pwd }}/origin_bot"
+    - name: git clone
+      git:
+        repo: https://github.com/TheLastochka/devops_bot.git
+        dest: "{{ bot_pwd }}/origin_bot"
+        version: main
+    - name: pip install
+      pip: 
+        requirements: "{{ bot_pwd }}/origin_bot/requirements.txt"
+    - name: run python bot
+      command: python3 "{{ bot_pwd }}/origin_bot/bot.py"
+      environment:
+        BOT_TOKEN: "{{ TOKEN }}"
+        SSH_HOST: "{{ RM_HOST }}"
+        SSH_PORT: "{{ RM_PORT }}"
+        SSH_USER: "{{ RM_USER }}"
+        SSH_PASSWORD: "{{ RM_PASSWORD }}"
+
+        DB_HOST: "{{ hostvars['host_db']['ansible_host'] }}"
+        DB_PORT: "{{ DB_PORT }}"
+        DB_USER: "{{ DB_USER }}"
+        DB_PASSWORD: "{{ DB_PASSWORD }}"
+        DB_NAME: "{{ DB_DATABASE }}"
+        PG_VERSION: "{{ PG_VERSION }}"
+
+
