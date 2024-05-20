@@ -8,7 +8,7 @@ RUN chown -R postgres:postgres /db_logs
 
 RUN echo "#!/bin/bash" > /usr/local/bin/init.sh && \
     echo "rm -rf /var/lib/postgresql/data/*" >> /usr/local/bin/init.sh && \
-    echo "until pg_basebackup -h db -p $DB_PORT -D /var/lib/postgresql/data -U ${PGUSER} -vP -w; do" >> /usr/local/bin/init.sh && \
+    echo "until pg_basebackup -R -h db -p $DB_PORT -D /var/lib/postgresql/data -U ${PGUSER} -vP -w; do" >> /usr/local/bin/init.sh && \
     echo "  echo 'Replica not ready, trying again...'" >> /usr/local/bin/init.sh && \
     echo "  sleep 1" >> /usr/local/bin/init.sh && \
     echo "done" >> /usr/local/bin/init.sh && \
