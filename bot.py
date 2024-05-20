@@ -344,9 +344,11 @@ def other_commands(update: Update, context):
         if data:
             logger.info(f"data: {data}")
             update.message.reply_text(data)
+            return
         elif execed:
             logger.info(f"Ничего не найдено")
             update.message.reply_text('Ничего не найдено')
+            return
         
         update.message.reply_text('Unknown command')
     else:
